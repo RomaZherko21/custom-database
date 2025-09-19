@@ -122,6 +122,8 @@ func CreatePageDirectory(tableName string, entries []PageDirectoryEntry) (*PageD
 
 	// Записываем заголовок в page directory файл
 	header := NewPageDirectoryHeader(uint32(len(entries)))
+	// Устанавливаем NextPageID равным количеству записей
+	header.NextPageID = uint32(len(entries))
 	_, err = dirFile.Write(header.Serialize())
 	if err != nil {
 		return nil, fmt.Errorf("failed to write header: %w", err)
@@ -214,59 +216,66 @@ func (pd *PageDirectory) AddPage(freeSpace uint32, flags uint32) error {
 	newPageID := pd.Header.NextPageID
 	entry := NewPageDirectoryEntry(newPageID, freeSpace, flags)
 
-	// Записываем в page directory файл
-	dirFile, err := os.Open(fmt.Sprintf(PAGE_DIRECTORY_FILE_PATH, pd.TableName))
+	// Обновляем данные в памяти сначала
+	pd.Entries = append(pd.Entries, *entry)
+	pd.Header.PageCount++
+	pd.Header.NextPageID++
+
+	// Открываем файл для записи в конец
+	dirFile, err := os.OpenFile(fmt.Sprintf(PAGE_DIRECTORY_FILE_PATH, pd.TableName), os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open page directory file: %w", err)
 	}
 	defer dirFile.Close()
 
-	// Записываем page в page directory файл
+	// Записываем новую запись в конец файла
 	_, err = dirFile.Write(entry.Serialize())
 	if err != nil {
 		return fmt.Errorf("failed to write entry: %w", err)
 	}
 
-	pd.Entries = append(pd.Entries, *entry)
-	pd.Header.PageCount++
-	pd.Header.NextPageID++
+	// Обновляем заголовок файла
+	err = pd.updateHeaderInFile()
+	if err != nil {
+		return fmt.Errorf("failed to update header: %w", err)
+	}
 
 	return nil
 }
 
 // UpdatePage обновляет информацию о странице в page directory
 func (pd *PageDirectory) UpdatePage(pageID uint32, freeSpace uint32, flags uint32) error {
-	// Проверяем, существует ли page directory файл
-	if _, err := os.Stat(fmt.Sprintf(PAGE_DIRECTORY_FILE_PATH, pd.TableName)); err != nil {
-		return fmt.Errorf("page directory for table %s not found", pd.TableName)
+	// Находим запись в памяти
+	var found bool
+	for i, entry := range pd.Entries {
+		if entry.PageID == pageID {
+			pd.Entries[i].FreeSpace = freeSpace
+			pd.Entries[i].Flags = flags
+			found = true
+			break
+		}
 	}
 
-	// Читаем page directory файл
-	dirFile, err := os.Open(fmt.Sprintf(PAGE_DIRECTORY_FILE_PATH, pd.TableName))
+	if !found {
+		return fmt.Errorf("page %d not found in directory", pageID)
+	}
+
+	// Обновляем в файле
+	dirFile, err := os.OpenFile(fmt.Sprintf(PAGE_DIRECTORY_FILE_PATH, pd.TableName), os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open page directory file: %w", err)
 	}
 	defer dirFile.Close()
 
-	// Обновляем конкретный page в page directory файлe
+	// Рассчитываем offset для перезаписи
+	offset := int64(PAGE_DIRECTORY_HEADER_SIZE) + (int64(pageID) * int64(PAGE_DIRECTORY_ENTRY_SIZE))
 	entry := NewPageDirectoryEntry(pageID, freeSpace, flags)
-	_, err = dirFile.Write(entry.Serialize())
+	_, err = dirFile.WriteAt(entry.Serialize(), offset)
 	if err != nil {
 		return fmt.Errorf("failed to write entry: %w", err)
 	}
-	// Рассчитываем offset для перезаписи
-	offset := int64(PAGE_DIRECTORY_HEADER_SIZE) + (int64(pageID) * int64(PAGE_DIRECTORY_ENTRY_SIZE))
-	dirFile.WriteAt(entry.Serialize(), offset)
 
-	// Обновляем запись в page directory файл
-	for i, entry := range pd.Entries {
-		if entry.PageID == pageID {
-			pd.Entries[i].FreeSpace = freeSpace
-			pd.Entries[i].Flags = flags
-			return nil
-		}
-	}
-	return fmt.Errorf("page %d not found in directory", pageID)
+	return nil
 }
 
 // FindPageWithSpace находит страницу с достаточным свободным местом
@@ -281,3 +290,19 @@ func (pd *PageDirectory) FindPageWithSpace(requiredSpace uint32) *PageDirectoryE
 
 // TODO: добавить функцию для сохранения изменений в файл
 // TODO: добавить функцию для удаления страниц
+
+// updateHeaderInFile обновляет заголовок в файле
+func (pd *PageDirectory) updateHeaderInFile() error {
+	dirFile, err := os.OpenFile(fmt.Sprintf(PAGE_DIRECTORY_FILE_PATH, pd.TableName), os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open page directory file: %w", err)
+	}
+	defer dirFile.Close()
+
+	_, err = dirFile.WriteAt(pd.Header.Serialize(), 0)
+	if err != nil {
+		return fmt.Errorf("failed to write header: %w", err)
+	}
+
+	return nil
+}
