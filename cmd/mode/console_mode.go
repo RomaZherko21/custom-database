@@ -1,8 +1,6 @@
 package mode
 
 import (
-	"custom-database/internal/backend"
-	"custom-database/internal/models"
 	"custom-database/internal/parser"
 	"fmt"
 	"io"
@@ -14,7 +12,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-func RunConsoleMode(parser parser.ParserService, mb backend.MemoryBackendService) {
+func RunConsoleMode(parser parser.ParserService) {
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          "# ",
 		HistoryFile:     "/tmp/tmp",
@@ -57,16 +55,16 @@ repl:
 			continue repl
 		}
 
-		results, err := mb.ExecuteStatement(result)
-		if err != nil {
-			fmt.Println(err)
-			continue repl
-		}
+		// results, err := mb.ExecuteStatement(result)
+		// if err != nil {
+		// 	fmt.Println(err)
+		// 	continue repl
+		// }
 
-		if results != nil {
-			printTable(results)
-			continue repl
-		}
+		// if results != nil {
+		// 	printTable(results)
+		// 	continue repl
+		// }
 
 		fmt.Println("ok")
 	}
@@ -93,19 +91,19 @@ func printTable(results *models.Table) error {
 			typ := results.Columns[i].Type
 			r := ""
 			switch typ {
-			case models.Int32Type:
-				if cell.IsNull() {
-					r = "null"
-				} else {
-					i := cell.AsInt()
-					r = fmt.Sprintf("%d", i)
-				}
-			case models.TextType:
-				if cell.IsNull() {
-					r = "null"
-				} else {
-					r = cell.AsText()
-				}
+			// case models.Int32Type:
+			// 	if cell.IsNull() {
+			// 		r = "null"
+			// 	} else {
+			// 		i := cell.AsInt()
+			// 		r = fmt.Sprintf("%d", i)
+			// 	}
+			// case models.TextType:
+			// 	if cell.IsNull() {
+			// 		r = "null"
+			// 	} else {
+			// 		r = cell.AsText()
+			// 	}
 			}
 
 			row = append(row, r)

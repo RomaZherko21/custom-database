@@ -1,4 +1,0 @@
-package diskmanager
-
-func NewDiskManager() {
-}
