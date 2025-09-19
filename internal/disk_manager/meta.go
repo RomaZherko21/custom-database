@@ -5,22 +5,14 @@ import (
 	"fmt"
 )
 
-type MetaFileHeader struct {
-	MagicNumber  uint32   // 4 байта - идентификатор мета-файла (0x9ABCDEF0)
-	TableNameLen uint32   // 4 байта - длина имени таблицы
-	ColumnCount  uint32   // 4 байта - количество колонок
-	TableName    [32]byte // 32 байта - имя таблицы (фиксированная длина)
-	NextRowID    uint64   // 8 байт - следующий RowID для автоинкремента  (userId int NOT NULL AUTO_INCREMENT)
-}
+const TABLE_NAME_MAX_LENGTH = 32
 
-type ColumnInfo struct {
-	ColumnName      [16]byte // 16 байт - имя колонки (фиксированная длина)
-	DataType        uint8    // 1 байт - тип данных (0=INT, 1=TEXT)
-	IsNullable      uint8    // 1 байт - может ли быть NULL (0=no, 1=yes)
-	IsPrimaryKey    uint8    // 1 байт - является ли первичным ключом
-	IsAutoIncrement uint8    // 1 байт - автоинкремент
-	MaxLength       uint16   // 2 байта - максимальная длина (для TEXT)
-	DefaultValue    uint32   // 4 байта - значение по умолчанию
+type MetaFileHeader struct {
+	MagicNumber  uint32                      // 4 байта - идентификатор мета-файла (0x9ABCDEF0)
+	TableNameLen uint32                      // 4 байта - длина имени таблицы
+	ColumnCount  uint32                      // 4 байта - количество колонок
+	TableName    [TABLE_NAME_MAX_LENGTH]byte // 32 байта - имя таблицы (фиксированная длина)
+	NextRowID    uint64                      // 8 байт - следующий RowID для автоинкремента  (userId int NOT NULL AUTO_INCREMENT)
 }
 
 func NewMetaFileHeader(tableName string, columnCount uint32) *MetaFileHeader {
@@ -34,20 +26,20 @@ func NewMetaFileHeader(tableName string, columnCount uint32) *MetaFileHeader {
 		MagicNumber:  0x9ABCDEF0,
 		TableNameLen: uint32(len(tableName)),
 		ColumnCount:  columnCount,
-		TableName:    [32]byte(tableNameBytes),
+		TableName:    [TABLE_NAME_MAX_LENGTH]byte(tableNameBytes),
 		NextRowID:    0,
 	}
 }
 
 // Serialize сериализует мета-файл в байты
 func (meta *MetaFileHeader) Serialize() []byte {
-	data := make([]byte, 0)
+	data := make([]byte, 56)
 
-	data = append(data, binary.BigEndian.AppendUint32(data, meta.MagicNumber)...)
-	data = append(data, binary.BigEndian.AppendUint32(data, meta.TableNameLen)...)
-	data = append(data, binary.BigEndian.AppendUint32(data, meta.ColumnCount)...)
-	data = append(data, meta.TableName[:]...)
-	data = append(data, binary.BigEndian.AppendUint64(data, meta.NextRowID)...)
+	binary.BigEndian.PutUint32(data[0:4], meta.MagicNumber)
+	binary.BigEndian.PutUint32(data[4:8], meta.TableNameLen)
+	binary.BigEndian.PutUint32(data[8:12], meta.ColumnCount)
+	copy(data[12:12+TABLE_NAME_MAX_LENGTH], meta.TableName[:])
+	binary.BigEndian.PutUint64(data[12+TABLE_NAME_MAX_LENGTH:12+TABLE_NAME_MAX_LENGTH+8], meta.NextRowID)
 
 	return data
 }
@@ -61,7 +53,64 @@ func (meta *MetaFileHeader) Deserialize(data []byte) (*MetaFileHeader, error) {
 		MagicNumber:  binary.BigEndian.Uint32(data[0:4]),
 		TableNameLen: binary.BigEndian.Uint32(data[4:8]),
 		ColumnCount:  binary.BigEndian.Uint32(data[8:12]),
-		TableName:    [32]byte(data[12:44]),
-		NextRowID:    binary.BigEndian.Uint64(data[44:52]),
+		TableName:    [TABLE_NAME_MAX_LENGTH]byte(data[12 : 12+TABLE_NAME_MAX_LENGTH]),
+		NextRowID:    binary.BigEndian.Uint64(data[12+TABLE_NAME_MAX_LENGTH : 12+TABLE_NAME_MAX_LENGTH+8]),
+	}, nil
+}
+
+const COLUMN_NAME_MAX_LENGTH = 32
+
+type ColumnInfo struct {
+	ColumnName      [COLUMN_NAME_MAX_LENGTH]byte // 16 байт - имя колонки (фиксированная длина)
+	DataType        DataType                     // 4 байт - тип данных (0=INT, 1=TEXT)
+	IsNullable      uint32                       // 4 байт - может ли быть NULL (0=no, 1=yes)
+	IsPrimaryKey    uint32                       // 4 байт - является ли первичным ключом
+	IsAutoIncrement uint32                       // 4 байт - автоинкремент
+	DefaultValue    uint32                       // 4 байта - значение по умолчанию
+}
+
+func NewColumnInfo(columnName string, dataType uint32, isNullable uint32, isPrimaryKey uint32, isAutoIncrement uint32, defaultValue uint32) *ColumnInfo {
+	columnNameBytes := []byte(columnName)
+	if len(columnNameBytes) > 32 {
+		columnNameBytes = columnNameBytes[:32]
+	}
+	columnNameBytes = append(columnNameBytes, make([]byte, 32-len(columnNameBytes))...)
+
+	return &ColumnInfo{
+		ColumnName:      [COLUMN_NAME_MAX_LENGTH]byte(columnNameBytes),
+		DataType:        DataType(dataType),
+		IsNullable:      isNullable,
+		IsPrimaryKey:    isPrimaryKey,
+		IsAutoIncrement: isAutoIncrement,
+		DefaultValue:    defaultValue,
+	}
+}
+
+// Serialize сериализует мета-файл в байты
+func (column *ColumnInfo) Serialize() []byte {
+	data := make([]byte, 28)
+
+	copy(data[0:COLUMN_NAME_MAX_LENGTH], column.ColumnName[:])
+	binary.BigEndian.PutUint32(data[COLUMN_NAME_MAX_LENGTH:COLUMN_NAME_MAX_LENGTH+4], uint32(column.DataType))
+	binary.BigEndian.PutUint32(data[COLUMN_NAME_MAX_LENGTH+4:COLUMN_NAME_MAX_LENGTH+8], uint32(column.IsNullable))
+	binary.BigEndian.PutUint32(data[COLUMN_NAME_MAX_LENGTH+8:COLUMN_NAME_MAX_LENGTH+12], uint32(column.IsPrimaryKey))
+	binary.BigEndian.PutUint32(data[COLUMN_NAME_MAX_LENGTH+12:COLUMN_NAME_MAX_LENGTH+16], uint32(column.IsAutoIncrement))
+	binary.BigEndian.PutUint32(data[COLUMN_NAME_MAX_LENGTH+20:COLUMN_NAME_MAX_LENGTH+24], uint32(column.DefaultValue))
+
+	return data
+}
+
+func (column *ColumnInfo) Deserialize(data []byte) (*ColumnInfo, error) {
+	if len(data) < 28 {
+		return nil, fmt.Errorf("insufficient data for column info")
+	}
+
+	return &ColumnInfo{
+		ColumnName:      [COLUMN_NAME_MAX_LENGTH]byte(data[0:COLUMN_NAME_MAX_LENGTH]),
+		DataType:        DataType(binary.BigEndian.Uint32(data[COLUMN_NAME_MAX_LENGTH : COLUMN_NAME_MAX_LENGTH+4])),
+		IsNullable:      binary.BigEndian.Uint32(data[COLUMN_NAME_MAX_LENGTH+4 : COLUMN_NAME_MAX_LENGTH+8]),
+		IsPrimaryKey:    binary.BigEndian.Uint32(data[COLUMN_NAME_MAX_LENGTH+8 : COLUMN_NAME_MAX_LENGTH+12]),
+		IsAutoIncrement: binary.BigEndian.Uint32(data[COLUMN_NAME_MAX_LENGTH+12 : COLUMN_NAME_MAX_LENGTH+16]),
+		DefaultValue:    binary.BigEndian.Uint32(data[COLUMN_NAME_MAX_LENGTH+20 : COLUMN_NAME_MAX_LENGTH+24]),
 	}, nil
 }

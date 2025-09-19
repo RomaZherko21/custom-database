@@ -5,6 +5,13 @@ import (
 	"fmt"
 )
 
+type DataType uint32
+
+const (
+	INT_32_TYPE DataType = 1
+	TEXT_TYPE   DataType = 2
+)
+
 // PageID представляет идентификатор страницы
 type PageID struct {
 	FileID     uint32 // ID файла таблицы
