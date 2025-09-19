@@ -11,6 +11,3 @@ SELECT id FROM users;
 
 DROP TABLE users;
 
-// для отображения bin файла
-hexdump ./test_users.meta
-hexdump -C ./test_users.meta  
