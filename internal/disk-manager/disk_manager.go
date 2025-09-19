@@ -1,0 +1,4 @@
+package diskmanager
+
+func NewDiskManager() {
+}
