@@ -143,6 +143,8 @@ func (column *ColumnInfo) Deserialize(data []byte) (*ColumnInfo, error) {
 	}, nil
 }
 
+const META_FILE_PATH = "tables/%s.meta"
+
 type MetaFile struct {
 	Header  *MetaFileHeader
 	Columns []ColumnInfo
@@ -150,12 +152,12 @@ type MetaFile struct {
 
 func CreateMetaFile(tableName string, columns []ColumnInfo) (*MetaFile, error) {
 	// Проверяем, существует ли таблица в папке tables в корне проекта
-	if _, err := os.Stat(fmt.Sprintf("tables/%s.meta", tableName)); err == nil {
+	if _, err := os.Stat(fmt.Sprintf(META_FILE_PATH, tableName)); err == nil {
 		return nil, fmt.Errorf("table %s already exists", tableName)
 	}
 
 	// Создаем .meta файл в папке tables
-	metaFilePath := fmt.Sprintf("tables/%s.meta", tableName)
+	metaFilePath := fmt.Sprintf(META_FILE_PATH, tableName)
 	metaFile, err := os.Create(metaFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create meta file: %w", err)
@@ -185,12 +187,12 @@ func CreateMetaFile(tableName string, columns []ColumnInfo) (*MetaFile, error) {
 
 func ReadMetaFile(tableName string) (*MetaFile, error) {
 	// Проверяем, существует ли таблица в папке tables в корне проекта
-	if _, err := os.Stat(fmt.Sprintf("tables/%s.meta", tableName)); err != nil {
+	if _, err := os.Stat(fmt.Sprintf(META_FILE_PATH, tableName)); err != nil {
 		return nil, fmt.Errorf("table %s not found", tableName)
 	}
 
 	// Читаем мета-файл
-	metaFile, err := os.Open(fmt.Sprintf("tables/%s.meta", tableName))
+	metaFile, err := os.Open(fmt.Sprintf(META_FILE_PATH, tableName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open meta file: %w", err)
 	}
@@ -237,3 +239,17 @@ func ReadMetaFile(tableName string) (*MetaFile, error) {
 		Columns: columns,
 	}, nil
 }
+
+func DeleteMetaFile(tableName string) error {
+	// Проверяем, существует ли таблица в папке tables в корне проекта
+	if _, err := os.Stat(fmt.Sprintf(META_FILE_PATH, tableName)); err != nil {
+		return fmt.Errorf("table %s not found", tableName)
+	}
+
+	// Удаляем .meta файл в папке tables в корне проекта
+	metaFilePath := fmt.Sprintf(META_FILE_PATH, tableName)
+	return os.Remove(metaFilePath)
+}
+
+// TODO: добавить отдельную функцию для инкремента NextRowID
+// TODO: обновление и добавление колонок не предусмотренно в этой версии
