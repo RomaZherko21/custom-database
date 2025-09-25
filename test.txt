@@ -10,3 +10,4 @@ SELECT name FROM users;
 SELECT id FROM users;
 
 DROP TABLE users;
+
