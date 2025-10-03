@@ -10,10 +10,11 @@ import (
 // TablesListHeader представляет заголовок файла списка таблиц
 type TablesListHeader struct {
 	MagicNumber uint32 // 4 байта - идентификатор файла списка таблиц
+	NextFileID  uint32 // 4 байта - следующий FileID для новых таблиц
 }
 
 // Размер заголовка файла списка таблиц
-const TABLES_LIST_HEADER_SIZE = 4
+const TABLES_LIST_HEADER_SIZE = 8
 
 // Serialize сериализует TablesListHeader в байты
 func (header *TablesListHeader) Serialize() []byte {
@@ -21,6 +22,9 @@ func (header *TablesListHeader) Serialize() []byte {
 
 	// Записываем MagicNumber (байты 0-4)
 	binary.BigEndian.PutUint32(data[0:4], header.MagicNumber)
+
+	// Записываем NextFileID (байты 4-8)
+	binary.BigEndian.PutUint32(data[4:8], header.NextFileID)
 
 	return data
 }
@@ -33,6 +37,7 @@ func (header *TablesListHeader) Deserialize(data []byte) (*TablesListHeader, err
 
 	return &TablesListHeader{
 		MagicNumber: binary.BigEndian.Uint32(data[0:4]),
+		NextFileID:  binary.BigEndian.Uint32(data[4:8]),
 	}, nil
 }
 
@@ -99,6 +104,7 @@ func NewTablesList() *TablesList {
 	return &TablesList{
 		Header: &TablesListHeader{
 			MagicNumber: TABLES_LIST_MAGIC_NUMBER,
+			NextFileID:  1,
 		},
 		Tables: make(map[string]FileID),
 	}
@@ -246,7 +252,8 @@ func addTableInList(tableName string) (*TablesList, error) {
 
 	// Генерируем новый FileID для таблицы
 	// Используем простую логику: следующий ID = количество таблиц + 1
-	nextFileID := uint32(len(tablesList.Tables) + 1)
+	nextFileID := tablesList.Header.NextFileID
+	tablesList.Header.NextFileID++
 	fileID := FileID{FileID: nextFileID}
 
 	// Добавляем таблицу в список
