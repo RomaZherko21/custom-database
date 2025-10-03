@@ -26,6 +26,10 @@ type DiskManager interface {
 	ReadPageDirectory(tableName string) (*PageDirectory, error)
 	WritePageDirectory(tableName string, pageDirectory *PageDirectory) (*PageDirectory, error)
 
+	// DataHeaders
+	ReadDataHeaders(tableName string) (*DataFileHeader, error)
+	WriteDataHeaders(tableName string, dataHeaders *DataFileHeader) (*DataFileHeader, error)
+
 	// Pages
 	ReadPage(tableName string, pageID PageID) (*Page, error)
 	WritePage(tableName string, pageID PageID, page *Page) (*Page, error)
@@ -135,6 +139,16 @@ func (dm *diskManager) ReadPageDirectory(tableName string) (*PageDirectory, erro
 
 func (dm *diskManager) WritePageDirectory(tableName string, pageDirectory *PageDirectory) (*PageDirectory, error) {
 	return writePageDirectory(tableName, pageDirectory)
+}
+
+// ========================== DataHeaders ==========================
+
+func (dm *diskManager) ReadDataHeaders(tableName string) (*DataFileHeader, error) {
+	return readDataFileHeaders(tableName)
+}
+
+func (dm *diskManager) WriteDataHeaders(tableName string, dataHeaders *DataFileHeader) (*DataFileHeader, error) {
+	return writeDataFileHeaders(tableName, dataHeaders)
 }
 
 // ========================== Page ==========================

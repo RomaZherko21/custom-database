@@ -156,6 +156,7 @@ func (df *DataFile) addPage(tableName string) error {
 	}
 	defer dataFile.Close()
 
+	// TODO: изменять счетчик в disk_manager???
 	// Обновляем счетчик страниц в заголовке
 	df.Header.PagesCount++
 
@@ -222,4 +223,56 @@ func (df *DataFile) writePage(tableName string, pageID PageID, page *RawPage) er
 	}
 
 	return nil
+}
+
+func readDataFileHeaders(tableName string) (*DataFileHeader, error) {
+	dataFilePath := fmt.Sprintf(DATA_FILE_PATH, tableName)
+
+	if _, err := os.Stat(dataFilePath); err != nil {
+		return nil, fmt.Errorf("data file for table %s not found", tableName)
+	}
+
+	dataFile, err := os.Open(dataFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open data file: %w", err)
+	}
+	defer dataFile.Close()
+
+	headerBytes := make([]byte, DATA_FILE_HEADER_SIZE)
+
+	n, err := dataFile.ReadAt(headerBytes, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read data file: %w", err)
+	}
+	if n != DATA_FILE_HEADER_SIZE {
+		return nil, fmt.Errorf("incomplete header read: got %d bytes, expected %d", n, DATA_FILE_HEADER_SIZE)
+	}
+
+	header, err := (&DataFileHeader{}).Deserialize(headerBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize header: %w", err)
+	}
+
+	return header, nil
+}
+
+func writeDataFileHeaders(tableName string, dataHeaders *DataFileHeader) (*DataFileHeader, error) {
+	dataFilePath := fmt.Sprintf(DATA_FILE_PATH, tableName)
+
+	if _, err := os.Stat(dataFilePath); err != nil {
+		return nil, fmt.Errorf("data file for table %s not found", tableName)
+	}
+
+	dataFile, err := os.OpenFile(dataFilePath, os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open data file: %w", err)
+	}
+	defer dataFile.Close()
+
+	_, err = dataFile.WriteAt(dataHeaders.Serialize(), 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write data file: %w", err)
+	}
+
+	return dataHeaders, nil
 }

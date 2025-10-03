@@ -15,6 +15,7 @@ func TestTablesListHeaderSerialize(t *testing.T) {
 		// Arrange
 		header := &TablesListHeader{
 			MagicNumber: TABLES_LIST_MAGIC_NUMBER,
+			NextFileID:  1,
 		}
 
 		// Act
@@ -24,13 +25,16 @@ func TestTablesListHeaderSerialize(t *testing.T) {
 		require.NotNil(t, data)
 		require.Equal(t, TABLES_LIST_HEADER_SIZE, len(data))
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(binary.BigEndian.Uint32(data[0:4])))
+		require.Equal(t, uint32(1), binary.BigEndian.Uint32(data[4:8]))
 	})
 
-	t.Run("2. Serialize header with custom magic number", func(t *testing.T) {
+	t.Run("2. Serialize header with custom values", func(t *testing.T) {
 		// Arrange
 		customMagic := uint32(0x12345678)
+		customNextFileID := uint32(42)
 		header := &TablesListHeader{
 			MagicNumber: customMagic,
+			NextFileID:  customNextFileID,
 		}
 
 		// Act
@@ -40,6 +44,7 @@ func TestTablesListHeaderSerialize(t *testing.T) {
 		require.NotNil(t, data)
 		require.Equal(t, TABLES_LIST_HEADER_SIZE, len(data))
 		require.Equal(t, customMagic, binary.BigEndian.Uint32(data[0:4]))
+		require.Equal(t, customNextFileID, binary.BigEndian.Uint32(data[4:8]))
 	})
 }
 
@@ -48,6 +53,7 @@ func TestTablesListHeaderDeserialize(t *testing.T) {
 		// Arrange
 		data := make([]byte, TABLES_LIST_HEADER_SIZE)
 		binary.BigEndian.PutUint32(data[0:4], TABLES_LIST_MAGIC_NUMBER)
+		binary.BigEndian.PutUint32(data[4:8], 5) // NextFileID
 
 		header := &TablesListHeader{}
 
@@ -58,6 +64,7 @@ func TestTablesListHeaderDeserialize(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(result.MagicNumber))
+		require.Equal(t, uint32(5), result.NextFileID)
 	})
 
 	t.Run("2. Deserialize header with insufficient data", func(t *testing.T) {
@@ -164,6 +171,7 @@ func TestNewTablesList(t *testing.T) {
 		require.NotNil(t, tablesList)
 		require.NotNil(t, tablesList.Header)
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(tablesList.Header.MagicNumber))
+		require.Equal(t, uint32(1), tablesList.Header.NextFileID)
 		require.NotNil(t, tablesList.Tables)
 		require.Equal(t, 0, len(tablesList.Tables))
 	})
@@ -181,6 +189,7 @@ func TestTablesListSerialize(t *testing.T) {
 		require.NotNil(t, data)
 		require.Equal(t, TABLES_LIST_HEADER_SIZE, len(data))
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(binary.BigEndian.Uint32(data[0:4])))
+		require.Equal(t, uint32(1), binary.BigEndian.Uint32(data[4:8]))
 	})
 
 	t.Run("2. Serialize tables list with entries", func(t *testing.T) {
@@ -197,6 +206,7 @@ func TestTablesListSerialize(t *testing.T) {
 		expectedSize := TABLES_LIST_HEADER_SIZE + 2*TABLES_LIST_ENTRY_SIZE
 		require.Equal(t, expectedSize, len(data))
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(binary.BigEndian.Uint32(data[0:4])))
+		require.Equal(t, uint32(1), binary.BigEndian.Uint32(data[4:8]))
 	})
 }
 
@@ -215,6 +225,7 @@ func TestTablesListDeserialize(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, tablesList.Header)
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(tablesList.Header.MagicNumber))
+		require.Equal(t, uint32(1), tablesList.Header.NextFileID)
 		require.Equal(t, 0, len(tablesList.Tables))
 	})
 
@@ -234,6 +245,7 @@ func TestTablesListDeserialize(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, tablesList.Header)
 		require.Equal(t, TABLES_LIST_MAGIC_NUMBER, int(tablesList.Header.MagicNumber))
+		require.Equal(t, uint32(1), tablesList.Header.NextFileID)
 		require.Equal(t, 2, len(tablesList.Tables))
 		require.Equal(t, uint32(1), tablesList.Tables["users"].FileID)
 		require.Equal(t, uint32(3), tablesList.Tables["orders"].FileID)
@@ -419,6 +431,7 @@ func TestAddTableInList(t *testing.T) {
 		require.Equal(t, 1, len(tablesList.Tables))
 		require.Contains(t, tablesList.Tables, tableName)
 		require.Equal(t, uint32(1), tablesList.Tables[tableName].FileID)
+		require.Equal(t, uint32(2), tablesList.Header.NextFileID) // NextFileID должен увеличиться
 
 		// Проверяем, что файл создан
 		_, err = os.Stat(TABLE_LIST_FILE_PATH)
@@ -459,6 +472,7 @@ func TestAddTableInList(t *testing.T) {
 		require.Contains(t, tablesList.Tables, secondTable)
 		require.Equal(t, uint32(1), tablesList.Tables[firstTable].FileID)
 		require.Equal(t, uint32(2), tablesList.Tables[secondTable].FileID)
+		require.Equal(t, uint32(3), tablesList.Header.NextFileID) // NextFileID должен увеличиться до 3
 
 		// Cleanup
 		os.RemoveAll("tables")
