@@ -15,6 +15,8 @@ const (
 	CreateTableKind AstStatmentKind = "CREATE_TABLE" // CREATE TABLE запрос
 	InsertKind      AstStatmentKind = "INSERT"       // INSERT запрос
 	DropTableKind   AstStatmentKind = "DROP_TABLE"   // DROP TABLE запрос
+	CreateIndexKind AstStatmentKind = "CREATE_INDEX" // CREATE INDEX запрос
+	DropIndexKind   AstStatmentKind = "DROP_INDEX"   // DROP INDEX запрос
 )
 
 // AstStatement представляет один SQL statement
@@ -25,6 +27,8 @@ type AstStatement struct {
 	CreateTableStatement *CreateTableStatement // CREATE TABLE statement
 	InsertStatement      *InsertStatement      // INSERT INTO statement
 	DropTableStatement   *DropTableStatement   // DROP TABLE statement
+	CreateIndexStatement *CreateIndexStatement // CREATE INDEX statement
+	DropIndexStatement   *DropIndexStatement   // DROP INDEX statement
 }
 
 // ExpressionKind тип для определения вида выражения
@@ -46,6 +50,16 @@ type CreateTableStatement struct {
 	Columns *[]*columnDefinition // Определения колонок
 }
 
+type CreateIndexStatement struct {
+	IndexName lex.Token   // Имя индекса
+	Table     lex.Token   // Имя таблицы
+	Column    *Expression // Определение 1 колонки
+}
+
+type DropIndexStatement struct {
+	IndexName lex.Token // Имя индекса
+}
+
 // columnDefinition представляет определение колонки в CREATE TABLE
 type columnDefinition struct {
 	Name     lex.Token // Имя колонки
@@ -64,4 +78,11 @@ type InsertStatement struct {
 type SelectStatement struct {
 	Table           lex.Token     // Имя таблицы
 	SelectedColumns []*Expression // Выбранные колонки
+	Where           *WhereClause
+}
+
+type WhereClause struct {
+	Left  *WhereClause
+	Right *WhereClause
+	Token *lex.Token
 }

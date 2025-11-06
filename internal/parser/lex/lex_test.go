@@ -127,4 +127,81 @@ func TestLex(t *testing.T) {
 
 		require.Error(t, err)
 	})
+
+	t.Run("CREATE INDEX command", func(t *testing.T) {
+		input := "CREATE INDEX idx_users_name ON users (name);"
+		want := []*Token{
+			{Kind: KeywordToken, Value: "create"},
+			{Kind: KeywordToken, Value: "index"},
+			{Kind: IdentifierToken, Value: "idx_users_name"},
+			{Kind: KeywordToken, Value: "on"},
+			{Kind: IdentifierToken, Value: "users"},
+			{Kind: SymbolToken, Value: "("},
+			{Kind: IdentifierToken, Value: "name"},
+			{Kind: SymbolToken, Value: ")"},
+			{Kind: SymbolToken, Value: ";"},
+		}
+
+		got, err := NewLexer().Lex(input)
+
+		require.NoError(t, err)
+
+		for i, token := range want {
+			if token.Kind != got[i].Kind || token.Value != got[i].Value {
+				t.Errorf("\nОшибка в токене %d:\nОжидалось: {Kind: %v, Value: %q}\nПолучено:  {Kind: %v, Value: %q}",
+					i, token.Kind, token.Value, got[i].Kind, got[i].Value)
+			}
+		}
+	})
+
+	t.Run("DROP INDEX command", func(t *testing.T) {
+		input := "DROP INDEX idx_users_name;"
+		want := []*Token{
+			{Kind: KeywordToken, Value: "drop"},
+			{Kind: KeywordToken, Value: "index"},
+			{Kind: IdentifierToken, Value: "idx_users_name"},
+			{Kind: SymbolToken, Value: ";"},
+		}
+
+		got, err := NewLexer().Lex(input)
+
+		require.NoError(t, err)
+
+		for i, token := range want {
+			if token.Kind != got[i].Kind || token.Value != got[i].Value {
+				t.Errorf("\nОшибка в токене %d:\nОжидалось: {Kind: %v, Value: %q}\nПолучено:  {Kind: %v, Value: %q}",
+					i, token.Kind, token.Value, got[i].Kind, got[i].Value)
+			}
+		}
+	})
+
+	t.Run("WHERE command", func(t *testing.T) {
+		input := "SELECT * FROM users WHERE id = 1 AND name = 'John';"
+		want := []*Token{
+			{Kind: KeywordToken, Value: "select"},
+			{Kind: SymbolToken, Value: "*"},
+			{Kind: KeywordToken, Value: "from"},
+			{Kind: IdentifierToken, Value: "users"},
+			{Kind: KeywordToken, Value: "where"},
+			{Kind: IdentifierToken, Value: "id"},
+			{Kind: MathOperatorToken, Value: "="},
+			{Kind: NumericToken, Value: "1"},
+			{Kind: LogicalOperatorToken, Value: "and"},
+			{Kind: IdentifierToken, Value: "name"},
+			{Kind: MathOperatorToken, Value: "="},
+			{Kind: StringToken, Value: "John"},
+			{Kind: SymbolToken, Value: ";"},
+		}
+
+		got, err := NewLexer().Lex(input)
+
+		require.NoError(t, err)
+
+		for i, token := range want {
+			if token.Kind != got[i].Kind || token.Value != got[i].Value {
+				t.Errorf("\nОшибка в токене %d:\nОжидалось: {Kind: %v, Value: %q}\nПолучено:  {Kind: %v, Value: %q}",
+					i, token.Kind, token.Value, got[i].Kind, got[i].Value)
+			}
+		}
+	})
 }

@@ -12,7 +12,7 @@ type BufferPoolInterface interface {
 	// GetPage - метод для получения страницы из буфера
 	// это нужно для того чтобы мы могли получить страницу из буфера
 	// и использовать ее в нашем коде, менять данные по поинтеру
-	GetPage(tableName string, pageID disk_manager.PageID) (*BufferFrame, error)
+	GetPage(tableName string, pageID disk_manager.PageID) (*disk_manager.Page, error)
 
 	// MarkDirty - метод для отметки страницы как измененной
 	// это нужно для того чтобы мы могли записать измененную страницу на диск
@@ -24,7 +24,7 @@ type BufferPoolInterface interface {
 	Unpin(tableName string, pageID disk_manager.PageID)
 
 	// AddNewPage - создает новую страницу в таблице
-	AddNewPage(tableName string, pageID disk_manager.PageID) (*BufferFrame, error)
+	AddNewPage(tableName string, pageID disk_manager.PageID) (*disk_manager.Page, error)
 
 	// Управление таблицами
 	CreateTable(tableName string, columns []disk_manager.ColumnInfo) error
@@ -125,7 +125,7 @@ func NewBufferPool(maxSize int, k int) (BufferPoolInterface, error) {
 }
 
 // GetPage получает страницу из буфера
-func (bp *BufferPool) GetPage(tableName string, pageID disk_manager.PageID) (*BufferFrame, error) {
+func (bp *BufferPool) GetPage(tableName string, pageID disk_manager.PageID) (*disk_manager.Page, error) {
 	// Проверяем кэш
 	if frame, exists := bp.Pages[pageID]; exists {
 		bp.LRUKCache.Access(pageID)
@@ -133,7 +133,7 @@ func (bp *BufferPool) GetPage(tableName string, pageID disk_manager.PageID) (*Bu
 		frame.PinCount++
 		frame.IsPinned = true
 		bp.PinCounts[pageID]++
-		return frame, nil
+		return frame.Page, nil
 	}
 
 	// Если буфер полон, нужно вытеснить страницу
@@ -166,7 +166,7 @@ func (bp *BufferPool) GetPage(tableName string, pageID disk_manager.PageID) (*Bu
 	bp.PinCounts[pageID] = 1
 	bp.LRUKCache.Access(pageID)
 
-	return frame, nil
+	return frame.Page, nil
 }
 
 // MarkDirty отмечает страницу как измененную
@@ -191,7 +191,7 @@ func (bp *BufferPool) Unpin(tableName string, pageID disk_manager.PageID) {
 }
 
 // AddNewPage создает новую страницу в таблице
-func (bp *BufferPool) AddNewPage(tableName string, pageID disk_manager.PageID) (*BufferFrame, error) {
+func (bp *BufferPool) AddNewPage(tableName string, pageID disk_manager.PageID) (*disk_manager.Page, error) {
 	page, err := bp.DiskManager.AddNewPage(tableName, pageID)
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (bp *BufferPool) AddNewPage(tableName string, pageID disk_manager.PageID) (
 	bp.DirtyPages[pageID] = false
 	bp.LRUKCache.Access(pageID)
 
-	return frame, nil
+	return frame.Page, nil
 }
 
 // startBgWorker запускает background worker
@@ -256,6 +256,25 @@ func (bp *BufferPool) CreateTable(tableName string, columns []disk_manager.Colum
 
 // DropTable удаляет таблицу
 func (bp *BufferPool) DropTable(tableName string) error {
+	// Сначала очищаем все страницы из буфера, которые принадлежат этой таблице
+	// Это нужно сделать до удаления таблицы, чтобы избежать проблем с записью dirty страниц
+	for pageID, frame := range bp.Pages {
+		if frame.TableName == tableName {
+			// Если страница dirty, записываем на диск перед удалением
+			// Но так как таблица удаляется, это не обязательно, но безопаснее
+			if frame.IsDirty {
+				// Пытаемся записать, но игнорируем ошибки (таблица может быть уже удалена)
+				_, _ = bp.DiskManager.WritePage(tableName, pageID, frame.Page)
+			}
+
+			// Удаляем страницу из буфера
+			delete(bp.Pages, pageID)
+			delete(bp.DirtyPages, pageID)
+			delete(bp.PinCounts, pageID)
+			bp.LRUKCache.Evict(pageID)
+		}
+	}
+
 	// Удаляем таблицу через DiskManager
 	err := bp.DiskManager.DropTable(tableName)
 	if err != nil {
@@ -330,6 +349,20 @@ func (bp *BufferPool) flushDirtyPages() {
 	for _, pageID := range dirtyPages {
 		frame, exists := bp.Pages[pageID]
 		if !exists {
+			// Страница уже удалена из буфера, удаляем из DirtyPages
+			delete(bp.DirtyPages, pageID)
+			continue
+		}
+
+		// Проверяем, что таблица все еще существует
+		// Если таблица была удалена, метаинформация будет отсутствовать
+		_, metaInfoExists := bp.MetaInfo[frame.TableName]
+		if !metaInfoExists {
+			// Таблица была удалена, удаляем страницу из буфера
+			delete(bp.Pages, pageID)
+			delete(bp.DirtyPages, pageID)
+			delete(bp.PinCounts, pageID)
+			bp.LRUKCache.Evict(pageID)
 			continue
 		}
 

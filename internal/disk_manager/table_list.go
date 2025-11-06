@@ -187,7 +187,7 @@ func (tl *TablesList) Deserialize(data []byte) error {
 // Нужен при создании базы данных, но таблиц еще нет
 func createTableListFile() (*TablesList, error) {
 	if _, err := os.Stat(TABLE_LIST_FILE_PATH); err == nil {
-		return nil, fmt.Errorf("tables list file already exists")
+		return nil, nil
 	}
 
 	// Создаем директорию для файла

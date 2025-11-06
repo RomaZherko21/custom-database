@@ -418,7 +418,7 @@ func TestDiskManagerWriteMetaFile(t *testing.T) {
 		require.NoError(t, err)
 
 		// Изменяем NextRowID
-		originalMeta.Header.NextRowID = 100
+		originalMeta.Header.NextTupleID = 100
 
 		// Act
 		writtenMeta, err := dm.WriteMetaFile(tableName, originalMeta)
@@ -426,12 +426,12 @@ func TestDiskManagerWriteMetaFile(t *testing.T) {
 		// Assert
 		require.NoError(t, err)
 		require.NotNil(t, writtenMeta)
-		require.Equal(t, uint64(100), writtenMeta.Header.NextRowID)
+		require.Equal(t, uint64(100), writtenMeta.Header.NextTupleID)
 
 		// Проверяем, что изменения записались
 		readMeta, err := dm.ReadMetaFile(tableName)
 		require.NoError(t, err)
-		require.Equal(t, uint64(100), readMeta.Header.NextRowID)
+		require.Equal(t, uint64(100), readMeta.Header.NextTupleID)
 	})
 
 	t.Run("2. Write meta file when table does not exist", func(t *testing.T) {
@@ -444,7 +444,7 @@ func TestDiskManagerWriteMetaFile(t *testing.T) {
 				TableNameLen: uint32(len(tableName)),
 				ColumnCount:  0,
 				TableName:    tableName,
-				NextRowID:    0,
+				NextTupleID:  0,
 			},
 			Columns: []ColumnInfo{},
 		}
@@ -564,7 +564,7 @@ func TestDiskManagerWritePageDirectory(t *testing.T) {
 		// Изменяем данные
 		originalDir.Header.PageCount = 2
 		originalDir.Header.NextPageID = 15
-		originalDir.Entries = []PageDirectoryEntry{
+		originalDir.Entries = []*PageDirectoryEntry{
 			{PageID: 0, FreeSpace: 1024, Flags: 0},
 			{PageID: 1, FreeSpace: 512, Flags: 0},
 		}
@@ -598,7 +598,7 @@ func TestDiskManagerWritePageDirectory(t *testing.T) {
 				PageCount:   0,
 				NextPageID:  PAGE_INITIAL_ID,
 			},
-			Entries: []PageDirectoryEntry{},
+			Entries: []*PageDirectoryEntry{},
 		}
 
 		// Act

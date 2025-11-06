@@ -26,6 +26,5 @@ tables/*
 
 # Игнорируем IDE файлы
 .idea/
-.vscode/
 *.swp
 *.swo

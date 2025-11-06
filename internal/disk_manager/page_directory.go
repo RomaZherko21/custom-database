@@ -82,7 +82,7 @@ func (entry *PageDirectoryEntry) Deserialize(data []byte) (*PageDirectoryEntry, 
 type PageDirectory struct {
 	TableName string
 	Header    *PageDirectoryHeader
-	Entries   []PageDirectoryEntry
+	Entries   []*PageDirectoryEntry
 }
 
 // Создает page directory файл, помним что пустой page мы не создаем,
@@ -116,7 +116,7 @@ func createPageDirectoryFile(tableName string) (*PageDirectory, error) {
 	return &PageDirectory{
 		TableName: tableName,
 		Header:    header,
-		Entries:   []PageDirectoryEntry{},
+		Entries:   []*PageDirectoryEntry{},
 	}, nil
 }
 
@@ -156,7 +156,7 @@ func readPageDirectory(tableName string) (*PageDirectory, error) {
 	}
 
 	// Читаем pages
-	entries := make([]PageDirectoryEntry, header.PageCount)
+	entries := make([]*PageDirectoryEntry, header.PageCount)
 
 	for i := 0; i < int(header.PageCount); i++ {
 		entryBytes := make([]byte, PAGE_DIRECTORY_ENTRY_SIZE)
@@ -173,7 +173,7 @@ func readPageDirectory(tableName string) (*PageDirectory, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to deserialize entry %d: %w", i, err)
 		}
-		entries[i] = *entry
+		entries[i] = entry
 	}
 
 	return &PageDirectory{

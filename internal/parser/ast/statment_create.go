@@ -111,3 +111,82 @@ func parseColumnDefinitions(tokens []*lex.Token, initialPointer uint, endDelimit
 
 	return &columnDefs, pointer, true
 }
+
+// parseCreateTableStatement
+// CREATE INDEX idx_users_name ON users (name);
+func parseCreateIndexStatement(tokens []*lex.Token, initialPointer uint) (*CreateIndexStatement, uint, bool) {
+	pointer := initialPointer
+
+	// Ожидаем ключевое слово CREATE
+	if !expectToken(tokens, pointer, tokenFromKeyword(lex.CreateKeyword)) {
+		return nil, initialPointer, false
+	}
+	pointer++
+
+	// Ожидаем ключевое слово INDEX
+	if !expectToken(tokens, pointer, tokenFromKeyword(lex.IndexKeyword)) {
+		return nil, initialPointer, false
+	}
+	pointer++
+
+	// Парсим имя индекса
+	indexName, newCursor, ok := parseToken(tokens, pointer, lex.IdentifierToken)
+	if !ok {
+		helpMessage(tokens, pointer, "Expected index name")
+		return nil, initialPointer, false
+	}
+	pointer = newCursor
+
+	// Ожидаем ключевое слово ON
+	if !expectToken(tokens, pointer, tokenFromKeyword(lex.OnKeyword)) {
+		helpMessage(tokens, pointer, "Expected on")
+		return nil, initialPointer, false
+	}
+	pointer++
+
+	// Парсим имя таблицы
+	tableName, newCursor, ok := parseToken(tokens, pointer, lex.IdentifierToken)
+	if !ok {
+		helpMessage(tokens, pointer, "Expected table name")
+		return nil, initialPointer, false
+	}
+	pointer = newCursor
+
+	// Ожидаем открывающую скобку
+	if !expectToken(tokens, pointer, tokenFromSymbol(lex.LeftparenSymbol)) {
+		helpMessage(tokens, pointer, "Expected left parenthesis")
+		return nil, initialPointer, false
+	}
+	pointer++
+
+	// Парсим список значений
+	columns, newCursor, ok := parseExpressions(tokens, pointer, []lex.Token{tokenFromSymbol(lex.RightparenSymbol)})
+	if !ok {
+		return nil, initialPointer, false
+	}
+	pointer = newCursor
+
+	// Ожидаем закрывающую скобку
+	if !expectToken(tokens, pointer, tokenFromSymbol(lex.RightparenSymbol)) {
+		helpMessage(tokens, pointer, "Expected right parenthesis")
+		return nil, initialPointer, false
+	}
+	pointer++
+
+	// Ожидаем точку с запятой
+	if !expectToken(tokens, pointer, tokenFromSymbol(lex.SemicolonSymbol)) {
+		helpMessage(tokens, pointer, "Expected semicolon")
+		return nil, initialPointer, false
+	}
+
+	column := (*columns)[0]
+
+	return &CreateIndexStatement{
+		IndexName: *indexName,
+		Table:     *tableName,
+		Column: &Expression{
+			Literal: column.Literal,
+			Kind:    column.Kind,
+		},
+	}, pointer, true
+}

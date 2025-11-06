@@ -73,3 +73,12 @@ func MathOperatorsToStrings(operators []MathOperator) []string {
 	}
 	return result
 }
+
+// LogicalOperatorsToStrings преобразует слайс LogicalOperator в слайс строк
+func LogicalOperatorsToStrings(operators []LogicalOperator) []string {
+	result := make([]string, len(operators))
+	for i, op := range operators {
+		result[i] = string(op)
+	}
+	return result
+}

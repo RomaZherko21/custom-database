@@ -25,7 +25,7 @@ func TestSerializeMetaDataHeader(t *testing.T) {
 		require.Equal(t, uint32(len(tableName)), binary.BigEndian.Uint32(data[4:8]))
 		require.Equal(t, columnCount, binary.BigEndian.Uint32(data[8:12]))
 		require.Equal(t, tableName, string(data[12:12+len(tableName)]))
-		require.Equal(t, uint64(0), binary.BigEndian.Uint64(data[44:52]))
+		require.Equal(t, uint64(1), binary.BigEndian.Uint64(data[44:52]))
 	})
 
 	t.Run("2. Meta file header serialization with long table name", func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestDeserializeMetaDataHeader(t *testing.T) {
 		require.Equal(t, originalHeader.MagicNumber, deserializedHeader.MagicNumber)
 		require.Equal(t, originalHeader.TableNameLen, deserializedHeader.TableNameLen)
 		require.Equal(t, originalHeader.ColumnCount, deserializedHeader.ColumnCount)
-		require.Equal(t, originalHeader.NextRowID, deserializedHeader.NextRowID)
+		require.Equal(t, originalHeader.NextTupleID, deserializedHeader.NextTupleID)
 		require.Equal(t, originalHeader.TableName, deserializedHeader.TableName)
 	})
 
@@ -446,7 +446,7 @@ func TestReadMetaFile(t *testing.T) {
 		require.Equal(t, createdMeta.Header.TableNameLen, readMeta.Header.TableNameLen)
 		require.Equal(t, createdMeta.Header.ColumnCount, readMeta.Header.ColumnCount)
 		require.Equal(t, createdMeta.Header.TableName, readMeta.Header.TableName)
-		require.Equal(t, createdMeta.Header.NextRowID, readMeta.Header.NextRowID)
+		require.Equal(t, createdMeta.Header.NextTupleID, readMeta.Header.NextTupleID)
 		require.Len(t, readMeta.Columns, len(columns))
 
 		// Cleanup
@@ -527,7 +527,7 @@ func TestWriteMetaFile(t *testing.T) {
 		require.NoError(t, err)
 
 		// Изменяем NextRowID
-		originalMeta.Header.NextRowID = 100
+		originalMeta.Header.NextTupleID = 100
 
 		// Act
 		writtenMeta, err := writeMetaFile(tableName, originalMeta)
@@ -535,12 +535,12 @@ func TestWriteMetaFile(t *testing.T) {
 		// Assert
 		require.NoError(t, err)
 		require.NotNil(t, writtenMeta)
-		require.Equal(t, uint64(100), writtenMeta.Header.NextRowID)
+		require.Equal(t, uint64(100), writtenMeta.Header.NextTupleID)
 
 		// Проверяем, что изменения записались
 		readMeta, err := readMetaFile(tableName)
 		require.NoError(t, err)
-		require.Equal(t, uint64(100), readMeta.Header.NextRowID)
+		require.Equal(t, uint64(100), readMeta.Header.NextTupleID)
 
 		// Cleanup
 		metaFilePath := filepath.Join("tables", tableName+".meta")
@@ -557,7 +557,7 @@ func TestWriteMetaFile(t *testing.T) {
 				TableNameLen: uint32(len(tableName)),
 				ColumnCount:  0,
 				TableName:    tableName,
-				NextRowID:    0,
+				NextTupleID:  0,
 			},
 			Columns: []ColumnInfo{},
 		}

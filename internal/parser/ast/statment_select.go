@@ -50,6 +50,15 @@ func parseSelectStatement(tokens []*lex.Token, initialPointer uint) (*SelectStat
 	statement.Table = *tableName
 	pointer = newCursor
 
+	// Парсим WHERE (опционально)
+	where, newCursor, ok := parseWhereClause(tokens, pointer, tokenFromSymbol(lex.SemicolonSymbol))
+	if !ok {
+		helpMessage(tokens, pointer, "Invalid WHERE clause")
+		return nil, initialPointer, false
+	}
+	statement.Where = where
+	pointer = newCursor
+
 	// Ожидаем точку с запятой
 	if !expectToken(tokens, pointer, tokenFromSymbol(lex.SemicolonSymbol)) {
 		helpMessage(tokens, pointer, "Expected semicolon")
