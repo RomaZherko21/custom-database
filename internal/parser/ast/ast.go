@@ -96,5 +96,21 @@ func parseStatement(tokens []*lex.Token, initialPointer uint) (*AstStatement, ui
 		}, newCursor, true
 	}
 
+	// Пробуем парсить CREATE INDEX statement
+	if createIndexStmt, newCursor, ok := parseCreateIndexStatement(tokens, pointer); ok {
+		return &AstStatement{
+			Kind:                 CreateIndexKind,
+			CreateIndexStatement: createIndexStmt,
+		}, newCursor, true
+	}
+
+	// Пробуем парсить DROP INDEX statement
+	if dropIndexStmt, newCursor, ok := parseDropIndexStatement(tokens, pointer); ok {
+		return &AstStatement{
+			Kind:               DropIndexKind,
+			DropIndexStatement: dropIndexStmt,
+		}, newCursor, true
+	}
+
 	return nil, initialPointer, false
 }

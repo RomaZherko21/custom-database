@@ -183,7 +183,7 @@ func (df *DataFile) readPage(tableName string, pageID PageID) (*RawPage, error) 
 	dataFilePath := fmt.Sprintf(DATA_FILE_PATH, tableName)
 
 	if pageID.PageNumber > df.Header.PagesCount {
-		return nil, fmt.Errorf("page id %d is out of range", pageID)
+		return nil, fmt.Errorf("page id %d is out of range", pageID.PageNumber)
 	}
 
 	// Проверяем, что файл существует

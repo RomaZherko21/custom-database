@@ -393,7 +393,7 @@ func TestReadPageDirectory(t *testing.T) {
 
 		// Добавляем entries вручную
 		createdDir.Header.PageCount = 2
-		createdDir.Entries = []PageDirectoryEntry{
+		createdDir.Entries = []*PageDirectoryEntry{
 			{PageID: 0, FreeSpace: 1024, Flags: 0},
 			{PageID: 1, FreeSpace: 512, Flags: 1},
 		}
@@ -440,7 +440,7 @@ func TestWritePageDirectory(t *testing.T) {
 		// Изменяем данные
 		originalDir.Header.PageCount = 3
 		originalDir.Header.NextPageID = 15
-		originalDir.Entries = []PageDirectoryEntry{
+		originalDir.Entries = []*PageDirectoryEntry{
 			{PageID: 0, FreeSpace: 1024, Flags: 0},
 			{PageID: 1, FreeSpace: 512, Flags: 0},
 			{PageID: 2, FreeSpace: 0, Flags: 1},
@@ -479,7 +479,7 @@ func TestWritePageDirectory(t *testing.T) {
 				PageCount:   0,
 				NextPageID:  PAGE_INITIAL_ID,
 			},
-			Entries: []PageDirectoryEntry{},
+			Entries: []*PageDirectoryEntry{},
 		}
 
 		// Act
@@ -505,7 +505,7 @@ func TestWritePageDirectory(t *testing.T) {
 
 		// Очищаем entries
 		originalDir.Header.PageCount = 0
-		originalDir.Entries = []PageDirectoryEntry{}
+		originalDir.Entries = []*PageDirectoryEntry{}
 
 		// Act
 		writtenDir, err := writePageDirectory(tableName, originalDir)

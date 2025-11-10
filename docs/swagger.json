@@ -1,0 +1,84 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API для работы с кастомной базой данных",
+        "title": "Custom Database API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/query": {
+            "post": {
+                "description": "Выполняет SQL запрос и возвращает результат",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "query"
+                ],
+                "summary": "Выполнить SQL запрос",
+                "parameters": [
+                    {
+                        "description": "SQL запрос",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SqlQueryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SqlQueryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SqlQueryResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handlers.SqlQueryRequest": {
+            "type": "object",
+            "required": [
+                "query"
+            ],
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "example": "SELECT id, name FROM users;"
+                }
+            }
+        },
+        "handlers.SqlQueryResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Invalid SQL syntax"
+                },
+                "result": {
+                    "type": "string",
+                    "example": "Query executed successfully"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        }
+    }
+}

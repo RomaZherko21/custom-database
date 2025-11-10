@@ -68,6 +68,8 @@ func (v *validator) validateStatement(statement *ast.AstStatement) error {
 		return v.validateCreateTableStatement(statement.CreateTableStatement)
 	case ast.DropTableKind:
 		return v.validateDropTableStatement(statement.DropTableStatement)
+	case ast.CreateIndexKind, ast.DropIndexKind:
+		return nil
 	default:
 		return &ValidationError{
 			Message: fmt.Sprintf("Unknown statement type: %s", statement.Kind),

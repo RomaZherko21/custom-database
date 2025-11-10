@@ -25,13 +25,14 @@ func (l *lex) Lex(source string) ([]*Token, error) {
 
 	// Список всех функций-лексеров в порядке приоритета
 	lexers := []lexerFunc{
-		lexKeyword,      // Ключевые слова (CREATE, SELECT и т.д.)
-		lexSymbol,       // Символы (скобки, запятые и т.д.)
-		lexNull,         // NULL
-		lexMathOperator, // Математические операторы (=, <, >, !=)
-		lexString,       // Строковые литералы
-		lexNumeric,      // Числовые литералы
-		lexIdentifier,   // Идентификаторы (имена таблиц, колонок)
+		lexKeyword,         // Ключевые слова (CREATE, SELECT и т.д.)
+		lexSymbol,          // Символы (скобки, запятые и т.д.)
+		lexNull,            // NULL
+		lexMathOperator,    // Математические операторы (=, <, >, !=)
+		lexLogicalOperator, // Логические операторы (AND, OR)
+		lexString,          // Строковые литералы
+		lexNumeric,         // Числовые литералы
+		lexIdentifier,      // Идентификаторы (имена таблиц, колонок)
 	}
 
 	// Проходим по всей строке, парся токены

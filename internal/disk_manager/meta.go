@@ -13,7 +13,7 @@ type MetaDataHeader struct {
 	TableNameLen uint32 // 4 байта - длина имени таблицы
 	ColumnCount  uint32 // 4 байта - количество колонок
 	TableName    string // строка до 32 байт (сериализуется как фиксированные 32 байта)
-	NextRowID    uint64 // 8 байт - следующий RowID для автоинкремента
+	NextTupleID  uint64 // 8 байт - следующий TupleID для автоинкремента
 }
 
 func newMetaFileHeader(tableName string, columnCount uint32) *MetaDataHeader {
@@ -26,7 +26,7 @@ func newMetaFileHeader(tableName string, columnCount uint32) *MetaDataHeader {
 		MagicNumber:  META_FILE_MAGIC_NUMBER,
 		TableNameLen: uint32(len(tableName)),
 		ColumnCount:  columnCount,
-		NextRowID:    0,
+		NextTupleID:  1,
 		TableName:    tableName,
 	}
 }
@@ -50,7 +50,7 @@ func (meta *MetaDataHeader) Serialize() []byte {
 	// Остальные байты уже заполнены нулями благодаря make([]byte, META_FILE_HEADER_SIZE)
 
 	// Записываем NextRowID (байты 44-52)
-	binary.BigEndian.PutUint64(data[12+TABLE_NAME_MAX_LENGTH:12+TABLE_NAME_MAX_LENGTH+8], meta.NextRowID)
+	binary.BigEndian.PutUint64(data[12+TABLE_NAME_MAX_LENGTH:12+TABLE_NAME_MAX_LENGTH+8], meta.NextTupleID)
 
 	return data
 }
@@ -74,7 +74,7 @@ func (meta *MetaDataHeader) Deserialize(data []byte) (*MetaDataHeader, error) {
 		MagicNumber:  magicNumber,
 		TableNameLen: tableNameLen,
 		ColumnCount:  columnCount,
-		NextRowID:    nextRowID,
+		NextTupleID:  nextRowID,
 		TableName:    tableName,
 	}, nil
 }

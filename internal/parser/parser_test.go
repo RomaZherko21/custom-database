@@ -371,4 +371,46 @@ func TestParse(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("valid CREATE INDEX statement", func(t *testing.T) {
+		source := "CREATE INDEX idx_users_name ON users (id);"
+		parser := NewParser()
+
+		result, err := parser.Parse(source)
+
+		require.NoError(t, err)
+		require.Len(t, result.Statements, 1)
+		require.Equal(t, ast.CreateIndexKind, result.Statements[0].Kind)
+	})
+
+	t.Run("valid DROP INDEX statement", func(t *testing.T) {
+		source := "DROP INDEX idx_users_name;"
+		parser := NewParser()
+
+		result, err := parser.Parse(source)
+
+		require.NoError(t, err)
+		require.Len(t, result.Statements, 1)
+		require.Equal(t, ast.DropIndexKind, result.Statements[0].Kind)
+	})
+
+	t.Run("valid SELECT with WHERE clause", func(t *testing.T) {
+		source := "SELECT id, name FROM users WHERE id = 1;"
+		parser := NewParser()
+
+		result, err := parser.Parse(source)
+
+		statement := result.Statements[0].SelectStatement
+
+		require.NoError(t, err)
+		require.Len(t, result.Statements, 1)
+		require.Equal(t, ast.SelectKind, result.Statements[0].Kind)
+		require.Equal(t, "users", statement.Table.Value)
+		require.Len(t, statement.SelectedColumns, 2)
+		require.Equal(t, "id", statement.SelectedColumns[0].Literal.Value)
+		require.Equal(t, "name", statement.SelectedColumns[1].Literal.Value)
+		require.Equal(t, "id", statement.Where.Left.Token.Value)
+		require.Equal(t, "=", statement.Where.Token.Value)
+		require.Equal(t, "1", statement.Where.Right.Token.Value)
+	})
 }

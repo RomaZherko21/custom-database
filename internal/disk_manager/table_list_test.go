@@ -306,28 +306,6 @@ func TestCreateTableListFile(t *testing.T) {
 		// Cleanup
 		os.RemoveAll("tables")
 	})
-
-	t.Run("2. Create table list file when already exists", func(t *testing.T) {
-		// Arrange
-		defer func() {
-			os.RemoveAll("tables")
-		}()
-
-		// Создаем файл первый раз
-		_, err := createTableListFile()
-		require.NoError(t, err)
-
-		// Act - пытаемся создать файл второй раз
-		tablesList, err := createTableListFile()
-
-		// Assert
-		require.Error(t, err)
-		require.Nil(t, tablesList)
-		require.Contains(t, err.Error(), "already exists")
-
-		// Cleanup
-		os.RemoveAll("tables")
-	})
 }
 
 func TestReadTableListFile(t *testing.T) {

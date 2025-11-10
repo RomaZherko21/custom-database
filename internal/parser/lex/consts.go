@@ -3,6 +3,8 @@ package lex
 // Keyword тип для ключевых слов SQL
 type Keyword string
 
+// CREATE INDEX index_name ON table_name (column_name);
+
 const (
 	// Основные операторы SQL
 	CreateKeyword Keyword = "create" // CREATE TABLE
@@ -15,6 +17,9 @@ const (
 	TableKeyword  Keyword = "table"  // CREATE TABLE
 	IntoKeyword   Keyword = "into"   // INSERT INTO
 	ValuesKeyword Keyword = "values" // VALUES (...)
+	IndexKeyword  Keyword = "index"  // CREATE INDEX
+	OnKeyword     Keyword = "on"     // ON table_name
+	WhereKeyword  Keyword = "where"  // WHERE condition
 
 	// Типы данных
 	IntKeyword  Keyword = "int"  // INTEGER
@@ -33,6 +38,9 @@ var Keywords = []Keyword{
 	TableKeyword,
 	FromKeyword,
 	IntoKeyword,
+	IndexKeyword,
+	OnKeyword,
+	WhereKeyword,
 	// Типы данных
 	IntKeyword,
 	TextKeyword,
@@ -81,4 +89,16 @@ var mathOperators = []MathOperator{
 	NotEqualOperator,
 	GreaterThanOperator,
 	LessThanOperator,
+}
+
+type LogicalOperator string
+
+const (
+	AndOperator LogicalOperator = "and"
+	OrOperator  LogicalOperator = "or"
+)
+
+var logicalOperators = []LogicalOperator{
+	AndOperator,
+	OrOperator,
 }

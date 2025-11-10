@@ -27,4 +27,7 @@ make test
 3. Для тестирования используйте: `make test`
 
 
-
+## Swagger
+```
+http://localhost:8080/swagger/index.html
+```

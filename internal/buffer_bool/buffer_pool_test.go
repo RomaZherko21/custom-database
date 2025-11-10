@@ -121,17 +121,20 @@ func TestBufferPoolGetPage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Act
-		frame, err := bp.GetPage(tableName, pageID)
+		page, err := bp.GetPage(tableName, pageID)
 
 		// Assert
 		require.NoError(t, err)
+		require.NotNil(t, page)
+		// Проверяем через bufferPool для доступа к фрейму
+		frame := bufferPool.Pages[pageID]
 		require.NotNil(t, frame)
 		require.Equal(t, pageID, frame.PageID)
 		require.Equal(t, tableName, frame.TableName)
 		require.Equal(t, 2, frame.PinCount)
 		require.True(t, frame.IsPinned)
 		require.False(t, frame.IsDirty)
-		require.NotNil(t, frame.Page)
+		require.Equal(t, page, frame.Page)
 
 		// Cleanup
 		bp.DropTable(tableName)
@@ -180,16 +183,19 @@ func TestBufferPoolGetPage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Первое чтение
-		frame1, err := bp.GetPage(tableName, pageID)
+		page1, err := bp.GetPage(tableName, pageID)
 		require.NoError(t, err)
+		frame1 := bufferPool.Pages[pageID]
 		require.Equal(t, 2, frame1.PinCount)
 
 		// Act - второе чтение той же страницы
-		frame2, err := bp.GetPage(tableName, pageID)
+		page2, err := bp.GetPage(tableName, pageID)
 
 		// Assert
 		require.NoError(t, err)
-		require.Equal(t, frame1, frame2)     // Тот же объект
+		require.Equal(t, page1, page2) // Тот же объект страницы
+		frame2 := bufferPool.Pages[pageID]
+		require.Equal(t, frame1, frame2)     // Тот же объект фрейма
 		require.Equal(t, 3, frame2.PinCount) // PinCount увеличился (1 от AddNewPage + 2 от GetPage)
 
 		// Cleanup
@@ -268,10 +274,12 @@ func TestBufferPoolGetPage(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID3)
 		require.NoError(t, err)
 
-		frame3, err := bp.GetPage(tableName, pageID3)
+		page3, err := bp.GetPage(tableName, pageID3)
 
 		// Assert
 		require.NoError(t, err)
+		require.NotNil(t, page3)
+		frame3 := bufferPool.Pages[pageID3]
 		require.NotNil(t, frame3)
 		require.Equal(t, pageID3, frame3.PageID)
 
@@ -321,11 +329,11 @@ func TestBufferPoolGetPage(t *testing.T) {
 		nonExistentPageID := disk_manager.PageID{PageNumber: 999}
 
 		// Act - пытаемся прочитать несуществующую страницу
-		frame, err := bp.GetPage(tableName, nonExistentPageID)
+		page, err := bp.GetPage(tableName, nonExistentPageID)
 
 		// Assert
 		require.Error(t, err)
-		require.Nil(t, frame)
+		require.Nil(t, page)
 	})
 }
 
@@ -372,8 +380,10 @@ func TestBufferPoolMarkDirty(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID)
 		require.NoError(t, err)
 
-		frame, err := bp.GetPage(tableName, pageID)
+		page, err := bp.GetPage(tableName, pageID)
 		require.NoError(t, err)
+		require.NotNil(t, page)
+		frame := bufferPool.Pages[pageID]
 		require.False(t, frame.IsDirty)
 
 		// Act
@@ -452,8 +462,10 @@ func TestBufferPoolUnpin(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID)
 		require.NoError(t, err)
 
-		frame, err := bp.GetPage(tableName, pageID)
+		page, err := bp.GetPage(tableName, pageID)
 		require.NoError(t, err)
+		require.NotNil(t, page)
+		frame := bufferPool.Pages[pageID]
 		require.Equal(t, 2, frame.PinCount)
 		require.True(t, frame.IsPinned)
 
@@ -505,28 +517,30 @@ func TestBufferPoolUnpin(t *testing.T) {
 		err = bp.CreateTable(tableName, columns)
 		require.NoError(t, err)
 
-		pageID := disk_manager.PageID{PageNumber: 1}
+		pageID := disk_manager.PageID{PageNumber: 1, TableName: tableName}
 
 		// Сначала создаем страницу
 		_, err = bp.AddNewPage(tableName, pageID)
 		require.NoError(t, err)
 
-		// Получаем страницу дважды (PinCount = 2)
-		frame1, err := bp.GetPage(tableName, pageID)
+		// Получаем страницу дважды (PinCount увеличивается)
+		page1, err := bp.GetPage(tableName, pageID)
 		require.NoError(t, err)
 
-		frame2, err := bp.GetPage(tableName, pageID)
+		page2, err := bp.GetPage(tableName, pageID)
 		require.NoError(t, err)
-		require.Equal(t, frame1, frame2)
+		require.Equal(t, page1, page2)
+		frame2 := bufferPool.Pages[pageID]
+		require.NotNil(t, frame2)
+		// AddNewPage создает страницу с PinCount=1, затем два GetPage увеличивают до 3
 		require.Equal(t, 3, frame2.PinCount)
-
-		// Cleanup
-		bp.DropTable(tableName)
+		require.Equal(t, 3, bufferPool.PinCounts[pageID])
 
 		// Act - unpin дважды
 		bp.Unpin(tableName, pageID)
 		require.Equal(t, 2, frame2.PinCount)
 		require.True(t, frame2.IsPinned)
+		require.Equal(t, 2, bufferPool.PinCounts[pageID])
 
 		bp.Unpin(tableName, pageID)
 
@@ -601,17 +615,19 @@ func TestBufferPoolAddNewPage(t *testing.T) {
 		pageID := disk_manager.PageID{PageNumber: 1}
 
 		// Act
-		frame, err := bp.AddNewPage(tableName, pageID)
+		page, err := bp.AddNewPage(tableName, pageID)
 
 		// Assert
 		require.NoError(t, err)
+		require.NotNil(t, page)
+		frame := bufferPool.Pages[pageID]
 		require.NotNil(t, frame)
 		require.Equal(t, pageID, frame.PageID)
 		require.Equal(t, tableName, frame.TableName)
 		require.Equal(t, 1, frame.PinCount)
 		require.True(t, frame.IsPinned)
 		require.False(t, frame.IsDirty)
-		require.NotNil(t, frame.Page)
+		require.Equal(t, page, frame.Page)
 		require.Contains(t, bufferPool.Pages, pageID)
 
 		// Cleanup
@@ -681,10 +697,12 @@ func TestBufferPoolAddNewPage(t *testing.T) {
 
 		// Act - добавляем новую страницу (должна вытеснить одну из предыдущих)
 		pageID3 := disk_manager.PageID{PageNumber: 3}
-		frame3, err := bp.AddNewPage(tableName, pageID3)
+		page3, err := bp.AddNewPage(tableName, pageID3)
 
 		// Assert
 		require.NoError(t, err)
+		require.NotNil(t, page3)
+		frame3 := bufferPool.Pages[pageID3]
 		require.NotNil(t, frame3)
 		require.Equal(t, pageID3, frame3.PageID)
 
@@ -708,11 +726,11 @@ func TestBufferPoolAddNewPage(t *testing.T) {
 		pageID := disk_manager.PageID{PageNumber: 1}
 
 		// Act
-		frame, err := bp.AddNewPage("non_existent_table", pageID)
+		page, err := bp.AddNewPage("non_existent_table", pageID)
 
 		// Assert
 		require.Error(t, err)
-		require.Nil(t, frame)
+		require.Nil(t, page)
 	})
 }
 
@@ -829,7 +847,7 @@ func TestBufferPoolWriteMetaInfo(t *testing.T) {
 		require.NotNil(t, metaInfo)
 
 		// Изменяем метаинформацию
-		metaInfo.MetaData.Header.NextRowID = 5
+		metaInfo.MetaData.Header.NextTupleID = 5
 
 		// Act
 		err = bp.WriteMetaInfo(tableName)
@@ -840,7 +858,7 @@ func TestBufferPoolWriteMetaInfo(t *testing.T) {
 		// Проверяем, что изменения сохранились
 		updatedMetaInfo, err := bp.ReadMetaInfo(tableName)
 		require.NoError(t, err)
-		require.Equal(t, uint64(5), updatedMetaInfo.MetaData.Header.NextRowID)
+		require.Equal(t, uint64(5), updatedMetaInfo.MetaData.Header.NextTupleID)
 
 		// Cleanup
 		bp.DropTable(tableName)
@@ -908,8 +926,10 @@ func TestBufferPoolComplexScenario(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID0)
 		require.NoError(t, err)
 
-		frame0, err := bp.GetPage(tableName, pageID0)
+		page0, err := bp.GetPage(tableName, pageID0)
 		require.NoError(t, err)
+		require.NotNil(t, page0)
+		frame0 := bufferPool.Pages[pageID0]
 		require.Equal(t, 2, frame0.PinCount)
 		require.Len(t, bufferPool.Pages, 1)
 
@@ -918,8 +938,10 @@ func TestBufferPoolComplexScenario(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID1)
 		require.NoError(t, err)
 
-		frame1, err := bp.GetPage(tableName, pageID1)
+		page1, err := bp.GetPage(tableName, pageID1)
 		require.NoError(t, err)
+		require.NotNil(t, page1)
+		frame1 := bufferPool.Pages[pageID1]
 		require.Equal(t, 2, frame1.PinCount)
 		require.Len(t, bufferPool.Pages, 2)
 
@@ -936,13 +958,16 @@ func TestBufferPoolComplexScenario(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID2)
 		require.NoError(t, err)
 
-		frame2, err := bp.GetPage(tableName, pageID2)
+		page2, err := bp.GetPage(tableName, pageID2)
 		require.NoError(t, err)
+		require.NotNil(t, page2)
+		frame2 := bufferPool.Pages[pageID2]
 		require.Equal(t, 2, frame2.PinCount)
 		require.Len(t, bufferPool.Pages, 2)
 
 		// 5. Помечаем страницу 1 как dirty
 		bp.MarkDirty(tableName, pageID1)
+		frame1 = bufferPool.Pages[pageID1]
 		require.True(t, frame1.IsDirty)
 		// Приводим к конкретному типу для доступа к полям
 		bufferPool2 := bp.(*BufferPool)
@@ -956,8 +981,10 @@ func TestBufferPoolComplexScenario(t *testing.T) {
 
 		// 7. Добавляем новую страницу (должна вытеснить страницу 2)
 		pageID3 := disk_manager.PageID{PageNumber: 4}
-		frame3, err := bp.AddNewPage(tableName, pageID3)
+		page3, err := bp.AddNewPage(tableName, pageID3)
 		require.NoError(t, err)
+		require.NotNil(t, page3)
+		frame3 := bufferPool.Pages[pageID3]
 		require.Equal(t, 1, frame3.PinCount)
 		require.Len(t, bufferPool.Pages, 2)
 
@@ -971,14 +998,14 @@ func TestBufferPoolComplexScenario(t *testing.T) {
 		require.NotNil(t, metaInfo)
 
 		// 10. Изменяем и записываем метаинформацию
-		metaInfo.MetaData.Header.NextRowID = 10
+		metaInfo.MetaData.Header.NextTupleID = 10
 		err = bp.WriteMetaInfo(tableName)
 		require.NoError(t, err)
 
 		// 11. Проверяем, что изменения сохранились
 		updatedMetaInfo, err := bp.ReadMetaInfo(tableName)
 		require.NoError(t, err)
-		require.Equal(t, uint64(10), updatedMetaInfo.MetaData.Header.NextRowID)
+		require.Equal(t, uint64(10), updatedMetaInfo.MetaData.Header.NextTupleID)
 
 		// Cleanup
 		bp.DropTable(tableName)
@@ -1027,10 +1054,12 @@ func TestBufferPoolBackgroundWorker(t *testing.T) {
 		_, err = bp.AddNewPage(tableName, pageID)
 		require.NoError(t, err)
 
-		frame, err := bp.GetPage(tableName, pageID)
+		page, err := bp.GetPage(tableName, pageID)
 		require.NoError(t, err)
+		require.NotNil(t, page)
 
 		bp.MarkDirty(tableName, pageID)
+		frame := bufferPool.Pages[pageID]
 		require.True(t, frame.IsDirty)
 		require.True(t, bufferPool.DirtyPages[pageID])
 
@@ -1039,6 +1068,7 @@ func TestBufferPoolBackgroundWorker(t *testing.T) {
 
 		// Assert - проверяем, что страница больше не dirty
 		// (background worker должен был записать её на диск)
+		frame = bufferPool.Pages[pageID]
 		require.False(t, frame.IsDirty)
 		// Приводим к конкретному типу для доступа к полям
 		bufferPool2 := bp.(*BufferPool)

@@ -31,10 +31,11 @@ type FileID struct {
 // PageID представляет идентификатор страницы
 type PageID struct {
 	PageNumber uint32 // Номер страницы в файле
+	TableName  string // Имя таблицы
 }
 
-// RowID представляет идентификатор строки
-type RowID struct {
+// TupleID представляет идентификатор строки
+type TupleID struct {
 	PageID     uint32 // Номер страницы в файле
 	SlotNumber uint32 // Номер слота в странице
 }

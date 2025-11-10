@@ -1,11 +1,15 @@
 CREATE TABLE users (id INT, name TEXT);
+CREATE INDEX idx_users_name ON users (id);
+
 CREATE TABLE posts (id INT, title TEXT, content TEXT);
 
 INSERT INTO users VALUES (1, 'Joffrey');
 INSERT INTO users VALUES (2, 'Walter');
-INSERT INTO users VALUES (3, null);
+INSERT INTO users VALUES (3, 'Helm');
+INSERT INTO users VALUES (4, null);
 
 SELECT id, name FROM users;
+SELECT id, name FROM users WHERE id = 2;
 SELECT name FROM users;
 SELECT id FROM users;
 

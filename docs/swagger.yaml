@@ -1,0 +1,56 @@
+basePath: /
+definitions:
+  handlers.SqlQueryRequest:
+    properties:
+      query:
+        example: SELECT id, name FROM users;
+        type: string
+    required:
+    - query
+    type: object
+  handlers.SqlQueryResponse:
+    properties:
+      error:
+        example: Invalid SQL syntax
+        type: string
+      result:
+        example: Query executed successfully
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для работы с кастомной базой данных
+  title: Custom Database API
+  version: "1.0"
+paths:
+  /query:
+    post:
+      consumes:
+      - application/json
+      description: Выполняет SQL запрос и возвращает результат
+      parameters:
+      - description: SQL запрос
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.SqlQueryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SqlQueryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.SqlQueryResponse'
+      summary: Выполнить SQL запрос
+      tags:
+      - query
+swagger: "2.0"
