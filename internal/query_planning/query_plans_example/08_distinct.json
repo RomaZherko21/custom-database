@@ -1,0 +1,36 @@
+{
+  "query": "SELECT DISTINCT city FROM users WHERE age > 18;",
+  "plan": {
+    "type": "PROJECTION",
+    "columns": ["city"],
+    "child": {
+      "type": "DISTINCT",
+      "child": {
+        "type": "FILTER",
+        "condition": {
+          "type": "COMPARISON",
+          "left": {
+            "type": "COLUMN",
+            "columnName": "age",
+            "tableName": ""
+          },
+          "right": {
+            "type": "CONSTANT",
+            "value": {
+              "type": "INT",
+              "intVal": 18,
+              "strVal": "",
+              "isNull": false
+            }
+          },
+          "operator": ">"
+        },
+        "child": {
+          "type": "SEQ_SCAN",
+          "tableName": "users"
+        }
+      }
+    }
+  }
+}
+

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"custom-database/internal/backend"
+	"custom-database/internal/operator_execution"
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
@@ -39,16 +39,8 @@ func (h *handlers) HandleSqlQuery(c *gin.Context) {
 
 	query := request.Query
 
-	ast, err := h.parser.Parse(query)
-	if err != nil {
-		c.JSON(400, SqlQueryResponse{
-			Success: false,
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	result, err := h.mb.ExecuteStatement(ast)
+	// Выполняем SQL запрос через backend service
+	result, err := h.backend.ExecuteSQL(query)
 	if err != nil {
 		c.JSON(400, SqlQueryResponse{
 			Success: false,
@@ -82,12 +74,12 @@ func (h *handlers) HandleSqlQuery(c *gin.Context) {
 }
 
 type jsonTable struct {
-	Name    string           `json:"name"`
-	Columns []backend.Column `json:"columns"`
-	Rows    [][]interface{}  `json:"rows"`
+	Name    string                      `json:"name"`
+	Columns []operator_execution.Column `json:"columns"`
+	Rows    [][]interface{}             `json:"rows"`
 }
 
-func convertToJson(table *backend.Table) (string, error) {
+func convertToJson(table *operator_execution.Table) (string, error) {
 	result := jsonTable{
 		Name:    table.Name,
 		Columns: table.Columns,
@@ -101,7 +93,7 @@ func convertToJson(table *backend.Table) (string, error) {
 			typ := table.Columns[i].Type
 			var s interface{}
 			switch typ {
-			case backend.TextType, backend.IntType:
+			case operator_execution.TextType, operator_execution.IntType:
 				if cell.IsNull() {
 					s = nil
 				} else {

@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name FROM users LIMIT 10;",
+  "plan": {
+    "type": "PROJECTION",
+    "columns": ["id", "name"],
+    "child": {
+      "type": "LIMIT",
+      "limit": 10,
+      "child": {
+        "type": "SEQ_SCAN",
+        "tableName": "users"
+      }
+    }
+  }
+}
+

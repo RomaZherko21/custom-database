@@ -1,8 +1,8 @@
 package console_mode
 
 import (
-	"custom-database/internal/backend"
-	"custom-database/internal/parser"
+	"custom-database/internal/operator_execution"
+	"custom-database/internal/operator_execution/executors"
 	"fmt"
 	"io"
 
@@ -13,7 +13,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-func RunConsoleMode(parser parser.ParserService, mb backend.MemoryBackendService) {
+func RunConsoleMode(backend executors.BackendService) {
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          "# ",
 		HistoryFile:     "/tmp/tmp",
@@ -50,13 +50,8 @@ repl:
 			break
 		}
 
-		result, err := parser.Parse(line)
-		if err != nil {
-			fmt.Println(err)
-			continue repl
-		}
-
-		results, err := mb.ExecuteStatement(result)
+		// Выполняем SQL запрос через backend service
+		results, err := backend.ExecuteSQL(line)
 		if err != nil {
 			fmt.Println(err)
 			continue repl
@@ -71,7 +66,7 @@ repl:
 	}
 }
 
-func printTable(results *backend.Table) error {
+func printTable(results *operator_execution.Table) error {
 	if len(results.Rows) == 0 {
 		fmt.Println("(no results)")
 		return nil
@@ -92,14 +87,13 @@ func printTable(results *backend.Table) error {
 			typ := results.Columns[i].Type
 			r := ""
 			switch typ {
-			case backend.IntType:
+			case operator_execution.IntType:
 				if cell.IsNull() {
 					r = "null"
 				} else {
-					i := cell.AsText()
-					r = fmt.Sprintf("%d", i)
+					r = cell.AsText()
 				}
-			case backend.TextType:
+			case operator_execution.TextType:
 				if cell.IsNull() {
 					r = "null"
 				} else {

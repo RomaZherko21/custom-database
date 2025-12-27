@@ -1,12 +1,19 @@
-CREATE TABLE users (id INT, name TEXT);
-CREATE INDEX idx_users_name ON users (id);
+CREATE TABLE users (id INT, age INT, name TEXT);
+// CREATE INDEX idx_users_name ON users (id);
 
 CREATE TABLE posts (id INT, title TEXT, content TEXT);
+INSERT INTO posts VALUES (1, 'Title...1', 'Content...1');
+INSERT INTO posts VALUES (2, 'Title...2', 'Content...2');
+INSERT INTO posts VALUES (2, 'Title...3', 'Content...3');
 
-INSERT INTO users VALUES (1, 'Joffrey');
-INSERT INTO users VALUES (2, 'Walter');
-INSERT INTO users VALUES (3, 'Helm');
-INSERT INTO users VALUES (4, null);
+SELECT * FROM users u JOIN posts p ON u.id = p.id LIMIT 2;
+
+INSERT INTO users VALUES (1, 25, 'Joffrey');
+INSERT INTO users VALUES (2, 54, 'Walter');
+INSERT INTO users VALUES (3, 76, 'Helm');
+INSERT INTO users VALUES (4, 44, null);
+
+SELECT DISTINCT id FROM users;
 
 SELECT id, name FROM users;
 SELECT id, name FROM users WHERE id = 2;
