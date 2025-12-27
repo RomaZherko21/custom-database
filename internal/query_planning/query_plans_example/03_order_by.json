@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, name, age FROM users ORDER BY age ASC, name DESC LIMIT 5;",
+  "plan": {
+    "type": "PROJECTION",
+    "columns": ["id", "name", "age"],
+    "child": {
+      "type": "SORT",
+      "orderBy": [
+        {
+          "columnName": "age",
+          "direction": "ASC"
+        },
+        {
+          "columnName": "name",
+          "direction": "DESC"
+        }
+      ],
+      "limit": 5,
+      "child": {
+        "type": "SEQ_SCAN",
+        "tableName": "users"
+      }
+    }
+  }
+}
+

@@ -1,0 +1,23 @@
+{
+  "query": "SELECT id, name FROM users ORDER BY name ASC;",
+  "plan": {
+    "type": "PROJECTION",
+    "columns": ["id", "name"],
+    "child": {
+      "type": "SORT",
+      "orderBy": [
+        {
+          "columnName": "name",
+          "direction": "ASC"
+        }
+      ],
+      "limit": 0,
+      "child": {
+        "type": "SEQ_SCAN",
+        "tableName": "users"
+      }
+    }
+  },
+  "note": "Когда LIMIT не указан, SortPlan.limit = 0, что означает использование дефолтного значения 20 в SortExecutor"
+}
+

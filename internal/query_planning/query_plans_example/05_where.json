@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name FROM users WHERE id > 10 AND age < 30;",
+  "plan": {
+    "type": "PROJECTION",
+    "columns": ["id", "name"],
+    "child": {
+      "type": "FILTER",
+      "condition": {
+        "type": "LOGIC",
+        "operator": "AND",
+        "left": {
+          "type": "COMPARISON",
+          "left": {
+            "type": "COLUMN",
+            "columnName": "id",
+            "tableName": ""
+          },
+          "right": {
+            "type": "CONSTANT",
+            "value": {
+              "type": "INT",
+              "intVal": 10,
+              "strVal": "",
+              "isNull": false
+            }
+          },
+          "operator": ">"
+        },
+        "right": {
+          "type": "COMPARISON",
+          "left": {
+            "type": "COLUMN",
+            "columnName": "age",
+            "tableName": ""
+          },
+          "right": {
+            "type": "CONSTANT",
+            "value": {
+              "type": "INT",
+              "intVal": 30,
+              "strVal": "",
+              "isNull": false
+            }
+          },
+          "operator": "<"
+        }
+      },
+      "child": {
+        "type": "SEQ_SCAN",
+        "tableName": "users"
+      }
+    }
+  }
+}
+

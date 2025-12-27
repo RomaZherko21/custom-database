@@ -1,0 +1,24 @@
+{
+  "query": "SELECT u.id, u.name, p.title FROM users u JOIN posts p ON u.id = p.user_id;",
+  "plan": {
+    "type": "PROJECTION",
+    "columns": ["id", "name", "title"],
+    "child": {
+      "type": "HASH_JOIN",
+      "leftTable": "users",
+      "rightTable": "posts",
+      "leftColumn": "id",
+      "rightColumn": "user_id",
+      "joinType": "INNER",
+      "leftChild": {
+        "type": "SEQ_SCAN",
+        "tableName": "users"
+      },
+      "rightChild": {
+        "type": "SEQ_SCAN",
+        "tableName": "posts"
+      }
+    }
+  }
+}
+
